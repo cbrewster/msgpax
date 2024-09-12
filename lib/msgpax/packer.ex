@@ -286,6 +286,7 @@ defimpl Msgpax.Packer, for: Any do
     fields = Keyword.get(options, :fields, keys)
     include_struct_field? = Keyword.get(options, :include_struct_field, :__struct__ in fields)
     fields = List.delete(fields, :__struct__)
+    omit_nil = Keyword.get(options, :omit_nil, false)
 
     extractor =
       cond do
@@ -301,6 +302,11 @@ defimpl Msgpax.Packer, for: Any do
         true ->
           quote(do: Map.take(struct, unquote(fields)))
       end
+
+    extractor =
+      if omit_nil,
+        do: quote(do: unquote(extractor) |> Map.filter(fn {_, val} -> !is_nil(val) end)),
+        else: extractor
 
     quote do
       defimpl unquote(@protocol), for: unquote(module) do
